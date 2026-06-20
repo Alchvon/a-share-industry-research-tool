@@ -1,0 +1,14 @@
+work/.venv/
+backend/data/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+# Local user data, runtime and secrets
+data/
+work/*.log
+work/*.db
+.env
+.env.*
+*.lnk
+work/
+

@@ -1,0 +1,2288 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>A股产业链龙头分析器</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f7f4;
+        --panel: #ffffff;
+        --panel-soft: #f0f4f2;
+        --ink: #1d2522;
+        --muted: #67716d;
+        --line: #d9dfdb;
+        --accent: #007c89;
+        --accent-strong: #005f68;
+        --green: #14824f;
+        --red: #b42318;
+        --amber: #a45f00;
+        --shadow: 0 10px 30px rgba(31, 42, 38, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family:
+          Inter, "Segoe UI", "Microsoft YaHei", system-ui, -apple-system,
+          sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+      }
+
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+      }
+
+      button {
+        min-height: 36px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 0 12px;
+        background: var(--panel);
+        color: var(--ink);
+        cursor: pointer;
+        transition: border-color 140ms ease, background 140ms ease, box-shadow 140ms ease;
+      }
+
+      button.primary {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: #fff;
+        box-shadow: 0 2px 5px rgba(0, 95, 104, 0.18);
+      }
+
+      button:hover:not(:disabled) {
+        border-color: var(--accent);
+        background: #f5fbfa;
+      }
+
+      button.primary:hover:not(:disabled) {
+        background: var(--accent-strong);
+      }
+
+      button:focus-visible,
+      input:focus-visible,
+      select:focus-visible,
+      textarea:focus-visible,
+      summary:focus-visible {
+        outline: 2px solid rgba(0, 124, 137, 0.38);
+        outline-offset: 2px;
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.58;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #fff;
+        color: var(--ink);
+      }
+
+      input,
+      select {
+        min-height: 40px;
+        padding: 0 12px;
+      }
+
+      textarea {
+        min-height: 68px;
+        padding: 10px 12px;
+        resize: vertical;
+      }
+
+      .app {
+        display: grid;
+        grid-template-rows: 58px 1fr 34px;
+        min-height: 100vh;
+      }
+
+      .topbar,
+      .statusbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.94);
+        padding: 0 20px;
+      }
+
+      .topbar {
+        min-height: 64px;
+      }
+
+      .brand {
+        display: grid;
+        gap: 2px;
+        min-width: 164px;
+        font-weight: 750;
+        line-height: 1.15;
+        white-space: nowrap;
+      }
+
+      .brand small {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 500;
+      }
+
+      .search {
+        display: grid;
+        grid-template-columns: minmax(180px, 430px) auto;
+        gap: 8px;
+        flex: 1;
+        max-width: 620px;
+      }
+
+      .topbar-actions {
+        display: flex;
+        gap: 6px;
+        margin-left: auto;
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: 276px minmax(460px, 1fr) 360px;
+        gap: 0;
+        min-height: 0;
+        background: #e8ece9;
+      }
+
+      .column {
+        min-width: 0;
+        min-height: 0;
+        overflow: auto;
+        background: var(--bg);
+        padding: 18px;
+      }
+
+      .column + .column {
+        border-left: 1px solid var(--line);
+      }
+
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: 0 2px 10px rgba(31, 42, 38, 0.045);
+      }
+
+      .panel + .panel {
+        margin-top: 12px;
+      }
+
+      .panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        min-height: 46px;
+        border-bottom: 1px solid var(--line);
+        background: #fbfcfb;
+        padding: 0 13px;
+      }
+
+      .panel-title {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 750;
+        letter-spacing: 0;
+      }
+
+      .panel-body {
+        padding: 13px;
+      }
+
+      .node-list,
+      .candidate-list,
+      .metric-grid {
+        display: grid;
+        gap: 8px;
+      }
+
+      #historyList {
+        max-height: min(42vh, 360px);
+        overflow-y: auto;
+        padding-right: 4px;
+        overscroll-behavior: contain;
+      }
+
+      #historyList::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      #historyList::-webkit-scrollbar-thumb {
+        border: 2px solid transparent;
+        border-radius: 999px;
+        background: #b7c4bf;
+        background-clip: padding-box;
+      }
+
+      .node {
+        width: 100%;
+        min-height: 54px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #fff;
+        padding: 8px;
+        text-align: left;
+      }
+
+      .inline-actions {
+        display: flex;
+        gap: 6px;
+        justify-content: flex-end;
+        margin-top: 8px;
+      }
+
+      .mini-button {
+        min-height: 26px;
+        padding: 0 8px;
+        font-size: 12px;
+      }
+
+      .node:hover,
+      .candidate:hover {
+        border-color: #a8c8c5;
+      }
+
+      .node.active {
+        border-color: var(--accent);
+        background: #f1faf8;
+        outline: 2px solid rgba(0, 124, 137, 0.12);
+      }
+
+      .node-name,
+      .candidate-name {
+        font-weight: 700;
+      }
+
+      .node-desc,
+      .candidate-reason,
+      .candidate-meta,
+      .muted {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .candidate {
+        display: grid;
+        grid-template-columns: 82px minmax(0, 1fr) 58px;
+        gap: 10px;
+        align-items: start;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #fff;
+        padding: 11px;
+        text-align: left;
+      }
+
+      .candidate.selected {
+        border-color: var(--accent);
+        background: #f3fbfa;
+        box-shadow: inset 3px 0 0 var(--accent);
+      }
+
+      .code {
+        font-family: "SFMono-Regular", Consolas, monospace;
+        color: var(--accent-strong);
+        font-weight: 700;
+      }
+
+      .candidate-meta {
+        margin-top: 4px;
+      }
+
+      .relation-tag {
+        display: inline-flex;
+        align-items: center;
+        min-height: 20px;
+        margin: 0 6px 4px 0;
+        border-radius: 999px;
+        padding: 0 7px;
+        background: #e9f5f2;
+        color: var(--accent-strong);
+        font-size: 11px;
+        font-weight: 700;
+        vertical-align: middle;
+      }
+
+      .relation-tag.manual {
+        background: #fff4df;
+        color: var(--amber);
+      }
+
+      .relation-tag.pending {
+        background: #f0f1f0;
+        color: var(--muted);
+      }
+
+      .compact-select {
+        width: auto;
+        min-height: 32px;
+        max-width: 126px;
+        padding: 0 26px 0 9px;
+        font-size: 12px;
+      }
+
+      .score {
+        justify-self: end;
+        min-width: 38px;
+        border-radius: 999px;
+        background: #eaf6ee;
+        color: var(--green);
+        font-size: 12px;
+        font-weight: 750;
+        line-height: 24px;
+        text-align: center;
+      }
+
+      .metric-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .metric-grid.compact {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .metric {
+        min-height: 76px;
+        border: 1px solid #dfe7e2;
+        border-radius: 6px;
+        background: #f7faf8;
+        padding: 11px;
+      }
+
+      .metric-label {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .metric-value {
+        margin-top: 6px;
+        font-size: 18px;
+        font-weight: 800;
+        overflow-wrap: anywhere;
+      }
+
+      .chart-stack {
+        display: grid;
+        gap: 12px;
+      }
+
+      .chart-card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 10px;
+      }
+
+      .comparison-wrap {
+        overflow-x: auto;
+      }
+
+      .comparison-table {
+        width: 100%;
+        min-width: 680px;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+
+      .comparison-table th,
+      .comparison-table td {
+        padding: 9px 7px;
+        border-bottom: 1px solid var(--line);
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      .comparison-table th {
+        position: sticky;
+        top: 0;
+        background: #f7faf8;
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      .comparison-table tbody tr:hover {
+        background: #f6fbfa;
+      }
+
+      .comparison-table th:first-child,
+      .comparison-table td:first-child {
+        text-align: left;
+      }
+
+      .comparison-table button {
+        min-height: 26px;
+        padding: 0 7px;
+        font-size: 12px;
+      }
+
+      .chart-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 8px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .chart-svg {
+        display: block;
+        width: 100%;
+        height: 170px;
+      }
+
+      .chart-axis {
+        stroke: var(--line);
+        stroke-width: 1;
+      }
+
+      .chart-line {
+        fill: none;
+        stroke: var(--accent);
+        stroke-width: 2.5;
+      }
+
+      .chart-fill {
+        fill: rgba(0, 124, 137, 0.11);
+      }
+
+      .chart-bar {
+        fill: rgba(0, 124, 137, 0.58);
+      }
+
+      .candle-up {
+        fill: rgba(180, 35, 24, 0.78);
+        stroke: var(--red);
+      }
+
+      .candle-down {
+        fill: rgba(20, 130, 79, 0.78);
+        stroke: var(--green);
+      }
+
+      .candle-wick {
+        stroke-width: 1.2;
+      }
+
+      .chart-roe {
+        fill: none;
+        stroke: var(--amber);
+        stroke-width: 2;
+      }
+
+      .empty {
+        border: 1px dashed var(--line);
+        border-radius: 8px;
+        padding: 18px;
+        color: var(--muted);
+        background: rgba(255, 255, 255, 0.54);
+      }
+
+      .statusbar {
+        border-top: 1px solid var(--line);
+        border-bottom: 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .status-ok {
+        color: var(--green);
+      }
+
+      .status-warn {
+        color: var(--amber);
+      }
+
+      .analysis-output {
+        min-height: 220px;
+        white-space: pre-wrap;
+        line-height: 1.6;
+      }
+
+      .saved-reports {
+        display: grid;
+        gap: 6px;
+        margin-top: 12px;
+      }
+
+      .saved-report-button {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        min-height: 32px;
+        color: var(--muted);
+        font-size: 12px;
+        text-align: left;
+      }
+
+      .field-stack {
+        display: grid;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+
+      .field-label {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .setup-note {
+        margin: 0 0 12px;
+        padding: 10px;
+        border-left: 3px solid var(--accent);
+        background: #f3f8ff;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .analysis-actions {
+        display: grid;
+        gap: 8px;
+        margin-top: 14px;
+        border-top: 1px solid var(--line);
+        padding-top: 12px;
+      }
+
+      .advanced-settings {
+        margin-top: 14px;
+        border-top: 1px solid var(--line);
+        padding-top: 12px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .advanced-settings summary {
+        cursor: pointer;
+        user-select: none;
+      }
+
+      .advanced-settings .field-stack {
+        margin-top: 10px;
+      }
+
+      .button-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      @media (max-width: 980px) {
+        .app {
+          grid-template-rows: auto 1fr auto;
+        }
+
+        .topbar {
+          align-items: stretch;
+          flex-direction: column;
+          padding: 12px;
+        }
+
+        .search {
+          grid-template-columns: 1fr;
+          width: 100%;
+          max-width: none;
+        }
+
+        .topbar-actions {
+          width: 100%;
+          margin-left: 0;
+        }
+
+        .topbar-actions button {
+          flex: 1 1 0;
+          padding: 0 8px;
+        }
+
+        .workspace {
+          grid-template-columns: 1fr;
+        }
+
+        .metric-grid.compact {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand"><span>A股产业链龙头分析器</span><small>研究工作台</small></div>
+        <form class="search" id="searchForm">
+          <input id="keywordInput" value="人工智能" list="topicSuggestions" aria-label="行业关键词" />
+          <datalist id="topicSuggestions"></datalist>
+          <button class="primary" id="startButton" type="submit">开始研究</button>
+        </form>
+        <div class="topbar-actions">
+          <button id="healthButton" type="button">服务状态</button>
+          <button id="diagnosticsButton" type="button">检查数据</button>
+          <button id="exportButton" type="button" disabled>导出表格</button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <section class="column">
+          <div class="panel">
+            <div class="panel-header">
+              <h2 class="panel-title">历史记录</h2>
+              <div class="inline-actions" style="margin: 0;">
+                <button id="importBackupButton" class="mini-button" type="button">导入</button>
+                <button id="backupButton" class="mini-button" type="button" disabled>备份当前</button>
+                <button id="historyButton" class="mini-button" type="button">刷新</button>
+              </div>
+            </div>
+            <div class="panel-body">
+              <input id="backupFileInput" type="file" accept="application/json,.json" hidden />
+              <div id="historyList" class="node-list">
+                <div class="empty">暂无历史记录。</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <h2 class="panel-title">产业链</h2>
+              <button id="addNodeButton" type="button" disabled>新增</button>
+            </div>
+            <div class="panel-body">
+              <div id="nodeList" class="node-list">
+                <div class="empty">输入关键词后生成子领域。</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="column">
+          <div class="panel">
+            <div class="panel-header">
+              <h2 class="panel-title">候选公司</h2>
+              <div class="inline-actions">
+                <button id="addCandidateButton" type="button" disabled>新增</button>
+                <button id="matchButton" type="button" disabled>重新找公司</button>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div id="candidateList" class="candidate-list">
+                <div class="empty">确认产业链后匹配候选公司。</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <h2 class="panel-title">公司行情</h2>
+              <button id="refreshDataButton" type="button" disabled>更新数据</button>
+            </div>
+            <div class="panel-body">
+              <div id="stockSummary" class="empty">选择公司后查看行情和估值。</div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <h2 class="panel-title">走势与财务</h2>
+            </div>
+            <div class="panel-body">
+              <div id="stockDetails" class="empty">选择公司后查看走势和财务指标。</div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <h2 class="panel-title">同一环节比较</h2>
+              <div class="inline-actions" style="margin: 0;">
+                <select id="comparisonSort" class="compact-select" aria-label="比较排序" disabled>
+                  <option value="default">匹配顺序</option>
+                  <option value="pe_asc">PE 从低到高</option>
+                  <option value="roe_desc">ROE 从高到低</option>
+                  <option value="gross_margin_desc">毛利率从高到低</option>
+                  <option value="market_cap_desc">市值从高到低</option>
+                </select>
+                <button id="compareButton" type="button" disabled>查看比较</button>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div id="peerComparison" class="empty">选择公司后，可比较同一细分环节的候选公司。</div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="column">
+          <div class="panel">
+            <div class="panel-header">
+              <h2 class="panel-title">AI 分析</h2>
+              <button id="exportReportButton" type="button" disabled>导出报告</button>
+            </div>
+            <div class="panel-body">
+              <div class="setup-note">需要 AI 深度分析时：选择平台，粘贴平台提供的密钥即可。密钥只会在发起分析时发送给你选择的平台，不写入本机数据库或浏览器存储；不填写也可以使用内置研究草稿。</div>
+              <div class="field-stack">
+                <label>
+                  <div class="field-label">选择 AI 平台</div>
+                  <select id="llmProvider">
+                    <option value="deepseek">DeepSeek</option>
+                    <option value="siliconflow">硅基流动</option>
+                    <option value="aliyun">阿里云百炼</option>
+                    <option value="zai">Z.ai / GLM</option>
+                    <option value="volcengine">火山方舟</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="openai_compatible">其他兼容平台</option>
+                    <option value="custom">手动设置</option>
+                  </select>
+                </label>
+                <label>
+                  <div class="field-label">粘贴访问密钥</div>
+                  <input id="llmKey" type="password" autocomplete="off" placeholder="不填写则使用内置研究草稿" />
+                </label>
+                <label>
+                  <div class="field-label">使用的模型（可按平台控制台修改）</div>
+                  <input id="llmModel" placeholder="例如 deepseek-chat、qwen-plus" />
+                </label>
+              </div>
+              <section class="analysis-actions" aria-label="选择分析内容">
+                <div class="field-label">选择分析内容</div>
+                <div class="button-grid">
+                  <button type="button" data-report="overview" disabled>完整研究</button>
+                  <button type="button" data-report="valuation" disabled>估值合理性</button>
+                  <button type="button" data-report="financial" disabled>财务健康度</button>
+                  <button type="button" data-report="position" disabled>行业地位</button>
+                  <button type="button" data-report="risk" disabled>主要风险</button>
+                </div>
+              </section>
+              <details class="advanced-settings">
+                <summary>高级设置</summary>
+                <div class="field-stack">
+                  <label>
+                    <div class="field-label">接口地址</div>
+                    <input id="llmEndpoint" placeholder="通常无需修改" />
+                  </label>
+                  <label>
+                    <div class="field-label">分析表达风格</div>
+                    <input id="llmTemperature" type="number" min="0" max="2" step="0.1" value="0.1" />
+                  </label>
+                </div>
+              </details>
+              <div class="analysis-output muted" id="analysisOutput">
+                选择公司后可生成分析；不接入模型时会返回本地草稿。
+              </div>
+              <div class="saved-reports" id="savedReports"></div>
+            </div>
+          </div>
+        </aside>
+      </main>
+
+      <footer class="statusbar">
+        <span id="statusText">仅供研究参考，不构成投资建议。</span>
+      </footer>
+    </div>
+
+    <script>
+      const API_BASE = "http://127.0.0.1:8000";
+      const LLM_PRESETS = {
+        custom: { endpoint: "", model: "" },
+        openai_compatible: { endpoint: "", model: "" },
+        openai: { endpoint: "https://api.openai.com/v1", model: "gpt-4o" },
+        deepseek: { endpoint: "https://api.deepseek.com", model: "deepseek-chat" },
+        siliconflow: { endpoint: "https://api.siliconflow.cn/v1", model: "deepseek-ai/DeepSeek-V3" },
+        aliyun: { endpoint: "https://dashscope.aliyuncs.com/compatible-mode/v1", model: "qwen-plus" },
+        zai: { endpoint: "https://api.z.ai/api/paas/v4", model: "glm-5.2" },
+        volcengine: { endpoint: "https://ark.cn-beijing.volces.com/api/v3", model: "请填写火山方舟 接口地址 ID" },
+      };
+      const state = {
+        analysisId: null,
+        nodes: [],
+        activeNodeId: null,
+        candidates: [],
+        selectedCandidate: null,
+        selectedSummary: null,
+        selectedKline: null,
+        selectedFinancial: null,
+        selectedValuation: null,
+        peerResult: null,
+        peerCandidates: [],
+        latestReport: null,
+      };
+
+      const els = {
+        form: document.querySelector("#searchForm"),
+        keyword: document.querySelector("#keywordInput"),
+        topicSuggestions: document.querySelector("#topicSuggestions"),
+        start: document.querySelector("#startButton"),
+        health: document.querySelector("#healthButton"),
+        diagnostics: document.querySelector("#diagnosticsButton"),
+        export: document.querySelector("#exportButton"),
+        history: document.querySelector("#historyButton"),
+        backup: document.querySelector("#backupButton"),
+        importBackup: document.querySelector("#importBackupButton"),
+        backupFile: document.querySelector("#backupFileInput"),
+        match: document.querySelector("#matchButton"),
+        addNode: document.querySelector("#addNodeButton"),
+        addCandidate: document.querySelector("#addCandidateButton"),
+        historyList: document.querySelector("#historyList"),
+        nodeList: document.querySelector("#nodeList"),
+        candidateList: document.querySelector("#candidateList"),
+        stockSummary: document.querySelector("#stockSummary"),
+        stockDetails: document.querySelector("#stockDetails"),
+        refreshData: document.querySelector("#refreshDataButton"),
+        compareButton: document.querySelector("#compareButton"),
+        comparisonSort: document.querySelector("#comparisonSort"),
+        peerComparison: document.querySelector("#peerComparison"),
+        analysisOutput: document.querySelector("#analysisOutput"),
+        savedReports: document.querySelector("#savedReports"),
+        exportReport: document.querySelector("#exportReportButton"),
+        llmProvider: document.querySelector("#llmProvider"),
+        llmEndpoint: document.querySelector("#llmEndpoint"),
+        llmKey: document.querySelector("#llmKey"),
+        llmModel: document.querySelector("#llmModel"),
+        llmTemperature: document.querySelector("#llmTemperature"),
+        reportButtons: Array.from(document.querySelectorAll("[data-report]")),
+        status: document.querySelector("#statusText"),
+      };
+
+      loadLlmConfig();
+      els.reportButtons.forEach((button) => {
+        button.addEventListener("click", () => runAnalysis(button.dataset.report));
+      });
+      els.history.addEventListener("click", loadHistory);
+      els.backup.addEventListener("click", exportAnalysisBackup);
+      els.importBackup.addEventListener("click", () => els.backupFile.click());
+      els.backupFile.addEventListener("change", importAnalysisBackup);
+      els.export.addEventListener("click", exportCandidatesCsv);
+      els.addNode.addEventListener("click", addIndustryNode);
+      els.addCandidate.addEventListener("click", addCandidate);
+      els.diagnostics.addEventListener("click", runDiagnostics);
+      els.refreshData.addEventListener("click", () => {
+        if (state.selectedCandidate) loadStockSummary(state.selectedCandidate.stock_code, { refresh: true });
+      });
+      els.compareButton.addEventListener("click", loadPeerComparison);
+      els.comparisonSort.addEventListener("change", () => {
+        if (state.peerResult) renderPeerComparison(state.peerResult, state.peerCandidates);
+      });
+      els.llmProvider.addEventListener("change", applyLlmPreset);
+      [els.llmEndpoint, els.llmKey, els.llmModel, els.llmTemperature].forEach((input) => {
+        input.addEventListener("change", saveLlmConfig);
+      });
+      loadHistory();
+      loadTopicSuggestions();
+      checkService();
+
+      function setStatus(text, kind = "") {
+        els.status.className = kind;
+        els.status.textContent = text;
+      }
+
+      async function api(path, options = {}) {
+        const response = await fetch(`${API_BASE}${path}`, {
+          headers: { "Content-Type": "application/json" },
+          ...options,
+        });
+        if (!response.ok) {
+          const body = await response.text();
+          throw new Error(`${response.status} ${body}`);
+        }
+        return response.json();
+      }
+
+      els.form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const keyword = els.keyword.value.trim();
+        if (!keyword) return;
+
+        els.start.disabled = true;
+        els.match.disabled = true;
+        setStatus("正在建立研究任务...", "status-warn");
+        try {
+          const created = await api("/api/analysis", {
+            method: "POST",
+            body: JSON.stringify({ keyword }),
+          });
+          state.analysisId = created.analysis_id;
+
+          setStatus("正在拆分研究方向...", "status-warn");
+          const decomposed = await api("/api/industry/decompose", {
+            method: "POST",
+            body: JSON.stringify({
+              analysis_id: state.analysisId,
+              keyword,
+              api_config: getLlmConfig(),
+            }),
+          });
+          state.nodes = decomposed.nodes;
+          state.activeNodeId = state.nodes[0]?.id ?? null;
+          state.candidates = [];
+          state.selectedCandidate = null;
+          state.selectedSummary = null;
+          state.selectedKline = null;
+          state.selectedFinancial = null;
+          state.selectedValuation = null;
+          renderNodes();
+          renderCandidates();
+          loadHistory();
+          updateReportButtons();
+          updateExportButton();
+          els.stockSummary.className = "empty";
+          els.stockSummary.textContent = "选择公司后查看行情和估值。";
+          els.stockDetails.className = "empty";
+          els.stockDetails.textContent = "选择公司后查看走势和财务指标。";
+          els.analysisOutput.textContent = "选择公司后可生成分析；不接入模型时会返回本地草稿。";
+          els.addNode.disabled = !state.analysisId;
+          els.addCandidate.disabled = !state.activeNodeId;
+
+          const decomposeWarning = decomposed.warnings?.length
+            ? ` 提示：${decomposed.warnings.join("; ")}`
+            : "";
+          setStatus(
+            `已拆分 ${state.nodes.length} 个研究方向，正在寻找相关公司...${decomposeWarning}`,
+            decomposeWarning ? "status-warn" : "status-ok",
+          );
+
+          if (state.nodes.length) {
+            await matchCompanies({ auto: true });
+          }
+        } catch (error) {
+          setStatus(`研究失败：${error.message}`, "status-warn");
+        } finally {
+          els.start.disabled = false;
+          els.match.disabled = state.nodes.length === 0;
+        }
+      });
+
+      els.match.addEventListener("click", () => matchCompanies({ auto: false }));
+
+      async function matchCompanies({ auto = false } = {}) {
+        if (!state.analysisId) return;
+        els.match.disabled = true;
+        setStatus(auto ? "正在自动寻找相关公司..." : "正在重新寻找相关公司...", "status-warn");
+        try {
+          const matched = await api("/api/company/match", {
+            method: "POST",
+            body: JSON.stringify({
+              analysis_id: state.analysisId,
+              limit_per_node: 5,
+            }),
+          });
+          state.candidates = matched.candidates;
+          state.selectedCandidate = null;
+          state.selectedSummary = null;
+          state.selectedKline = null;
+          state.selectedFinancial = null;
+          state.selectedValuation = null;
+          renderCandidates();
+          updateReportButtons();
+          updateExportButton();
+          loadHistory();
+          const warning = matched.warnings?.length
+            ? ` 提示：${matched.warnings.join("; ")}`
+            : "";
+          setStatus(
+            `已找到 ${state.candidates.length} 家相关公司。${warning}`,
+            warning ? "status-warn" : "status-ok",
+          );
+        } catch (error) {
+          setStatus(`寻找公司失败：${error.message}`, "status-warn");
+        } finally {
+          els.match.disabled = state.nodes.length === 0;
+        }
+      }
+      els.health.addEventListener("click", checkService);
+
+      async function checkService() {
+        try {
+          const health = await api("/health");
+          const provider = health.provider;
+          setStatus(
+            `本地服务已就绪，行情数据服务${provider.available ? "可用" : "暂不可用"}。`,
+            provider.available ? "status-ok" : "status-warn",
+          );
+        } catch {
+          setStatus("本地服务尚未启动。请双击项目根目录中的“启动分析器.cmd”。", "status-warn");
+        }
+      }
+
+      async function runDiagnostics() {
+        els.diagnostics.disabled = true;
+        setStatus("正在诊断 行情数据工具 数据来源...", "status-warn");
+        try {
+          const result = await api("/api/data-source/diagnostics");
+          els.analysisOutput.className = "analysis-output";
+          els.analysisOutput.textContent = formatDiagnostics(result);
+          const failed = result.checks.filter((check) => !check.ok).length;
+          setStatus(
+            failed ? `数据来源检查完成：${failed} 项异常，详见 AI 分析面板。` : "数据来源检查通过，行情数据工具 主要接口可访问。",
+            failed ? "status-warn" : "status-ok",
+          );
+        } catch (error) {
+          setStatus(`数据来源检查失败：${error.message}`, "status-warn");
+        } finally {
+          els.diagnostics.disabled = false;
+        }
+      }
+      async function loadTopicSuggestions() {
+        try {
+          const result = await api("/api/knowledge/topics");
+          const topics = result.topics ?? [];
+          els.topicSuggestions.innerHTML = topics
+            .map((topic) => `<option value="${escapeHtml(topic.name)}"></option>`)
+            .join("");
+          const names = topics.slice(0, 8).map((topic) => topic.name).join("、");
+          if (names) {
+            setStatus(`可直接输入宽泛主题，例如：${names}。`, "");
+          }
+        } catch {
+          // 建议列表只是辅助功能，读取失败不影响主流程。
+        }
+      }
+      async function loadHistory() {
+        try {
+          const records = await api("/api/history?limit=12");
+          renderHistory(records);
+        } catch (error) {
+          els.historyList.innerHTML = `<div class="empty">历史读取失败：${escapeHtml(error.message)}</div>`;
+        }
+      }
+
+      function renderHistory(records) {
+        if (!records.length) {
+          els.historyList.innerHTML = `<div class="empty">暂无历史记录。</div>`;
+          return;
+        }
+        els.historyList.innerHTML = records
+          .map(
+            (record) => `
+              <div class="node" data-analysis-id="${record.id}">
+                <div class="node-name">${escapeHtml(record.keyword)}</div>
+                <div class="node-desc">${escapeHtml(statusLabel(record.status))} · ${formatDateTime(record.updated_at)}</div>
+                <div class="inline-actions">
+                  <button class="mini-button" data-load-history="${record.id}" type="button">打开</button>
+                  <button class="mini-button" data-delete-history="${record.id}" type="button">删除</button>
+                </div>
+              </div>
+            `,
+          )
+          .join("");
+        els.historyList.querySelectorAll("[data-load-history]").forEach((button) => {
+          button.addEventListener("click", (event) => {
+            event.stopPropagation();
+            loadAnalysis(button.dataset.loadHistory);
+          });
+        });
+        els.historyList.querySelectorAll("[data-delete-history]").forEach((button) => {
+          button.addEventListener("click", (event) => {
+            event.stopPropagation();
+            deleteHistory(button.dataset.deleteHistory);
+          });
+        });
+        els.historyList.querySelectorAll("[data-analysis-id]").forEach((item) => {
+          item.addEventListener("click", () => loadAnalysis(item.dataset.analysisId));
+        });
+      }
+
+      async function deleteHistory(analysisId) {
+        if (!analysisId || !confirm("删除这条研究记录？相关方向和公司也会一起删除。")) return;
+        try {
+          await api(`/api/analysis/${analysisId}`, { method: "DELETE" });
+          if (state.analysisId === analysisId) {
+            state.analysisId = null;
+            state.nodes = [];
+            state.activeNodeId = null;
+            state.candidates = [];
+            state.selectedCandidate = null;
+            state.selectedSummary = null;
+            state.selectedKline = null;
+            state.selectedFinancial = null;
+          state.selectedValuation = null;
+          renderNodes();
+            renderCandidates();
+            updateReportButtons(false);
+            updateExportButton();
+            els.match.disabled = true;
+            els.addNode.disabled = true;
+            els.addCandidate.disabled = true;
+          }
+          await loadHistory();
+          setStatus("已删除这条研究记录。", "status-ok");
+        } catch (error) {
+          setStatus(`删除历史记录失败：${error.message}`, "status-warn");
+        }
+      }
+
+      function statusLabel(status) {
+        return {
+          created: "已创建",
+          decomposed: "已拆分",
+          matched: "已找到公司",
+        }[status] || status || "已保存";
+      }
+      async function loadAnalysis(analysisId) {
+        setStatus("正在加载历史分析...", "status-warn");
+        try {
+          const detail = await api(`/api/analysis/${analysisId}`);
+          const candidates = await api(`/api/company?analysis_id=${encodeURIComponent(analysisId)}`);
+          state.analysisId = analysisId;
+          state.nodes = detail.nodes;
+          state.activeNodeId = state.nodes[0]?.id ?? null;
+          state.candidates = candidates;
+          state.selectedCandidate = null;
+          state.selectedSummary = null;
+          state.selectedKline = null;
+          state.selectedFinancial = null;
+          state.selectedValuation = null;
+          els.keyword.value = detail.analysis.keyword;
+          renderNodes();
+          renderCandidates();
+          updateReportButtons();
+          updateExportButton();
+          els.match.disabled = state.nodes.length === 0;
+          els.addNode.disabled = !state.analysisId;
+          els.addCandidate.disabled = !state.activeNodeId;
+          els.stockSummary.className = "empty";
+          els.stockSummary.textContent = "选择公司后查看行情和估值。";
+          els.stockDetails.className = "empty";
+          els.stockDetails.textContent = "选择公司后查看走势和财务指标。";
+          setStatus(
+            `已加载历史分析：${detail.analysis.keyword}，候选公司 ${candidates.length} 家。`,
+            "status-ok",
+          );
+        } catch (error) {
+          setStatus(`历史加载失败：${error.message}`, "status-warn");
+        }
+      }
+
+      function renderNodes() {
+        if (!state.nodes.length) {
+          els.nodeList.innerHTML = `<div class="empty">输入关键词后生成子领域。</div>`;
+          return;
+        }
+        els.nodeList.innerHTML = state.nodes
+          .map(
+            (node) => `
+              <button class="node ${node.id === state.activeNodeId ? "active" : ""}" data-node-id="${node.id}" type="button">
+                <div class="node-name">${escapeHtml(node.name)}</div>
+                <div class="node-desc">${escapeHtml(node.description)}</div>
+                <div class="inline-actions">
+                  <span class="mini-button" data-edit-node="${node.id}">编辑</span>
+                  <span class="mini-button" data-delete-node="${node.id}">删除</span>
+                </div>
+              </button>
+            `,
+          )
+          .join("");
+
+        els.nodeList.querySelectorAll("[data-node-id]").forEach((button) => {
+          button.addEventListener("click", () => {
+            state.activeNodeId = button.dataset.nodeId;
+            renderNodes();
+            renderCandidates();
+            els.addCandidate.disabled = !state.activeNodeId;
+          });
+        });
+        els.nodeList.querySelectorAll("[data-edit-node]").forEach((button) => {
+          button.addEventListener("click", (event) => {
+            event.stopPropagation();
+            editIndustryNode(button.dataset.editNode);
+          });
+        });
+        els.nodeList.querySelectorAll("[data-delete-node]").forEach((button) => {
+          button.addEventListener("click", (event) => {
+            event.stopPropagation();
+            deleteIndustryNode(button.dataset.deleteNode);
+          });
+        });
+      }
+
+      function renderCandidates() {
+        const activeCandidates = state.candidates.filter(
+          (item) => !state.activeNodeId || item.industry_node_id === state.activeNodeId,
+        );
+        if (!activeCandidates.length) {
+          els.candidateList.innerHTML = `<div class="empty">暂无候选公司。</div>`;
+          updateExportButton();
+          updateCompareButton();
+          updateRefreshButton();
+          updateBackupButton();
+          return;
+        }
+        els.candidateList.innerHTML = activeCandidates
+          .map(
+            (item) => `
+              <button class="candidate ${item.id === state.selectedCandidate?.id ? "selected" : ""}" data-code="${item.stock_code}" type="button">
+                <div class="code">${escapeHtml(item.stock_code)}</div>
+                <div>
+                  <div class="candidate-name">${escapeHtml(item.stock_name)}</div>
+                  <div class="candidate-reason"><span class="relation-tag ${candidateRelationship(item).tone}">${escapeHtml(candidateRelationship(item).label)}</span>${escapeHtml(candidateRelationship(item).evidence)}</div>
+                  <div class="candidate-meta">${escapeHtml(candidateMeta(item))}</div>
+                  <div class="inline-actions">
+                    <span class="mini-button" data-edit-candidate="${item.id}">编辑</span>
+                    <span class="mini-button" data-delete-candidate="${item.id}">删除</span>
+                  </div>
+                </div>
+                <div class="score">${item.score ?? "-"}</div>
+              </button>
+            `,
+          )
+          .join("");
+
+        els.candidateList.querySelectorAll("[data-code]").forEach((button) => {
+          button.addEventListener("click", () => {
+            state.selectedCandidate = state.candidates.find(
+              (item) => item.stock_code === button.dataset.code,
+            );
+            updateCompareButton();
+            updateRefreshButton();
+            renderCandidates();
+            loadStockSummary(button.dataset.code);
+          });
+        });
+        els.candidateList.querySelectorAll("[data-edit-candidate]").forEach((button) => {
+          button.addEventListener("click", (event) => {
+            event.stopPropagation();
+            editCandidate(button.dataset.editCandidate);
+          });
+        });
+        els.candidateList.querySelectorAll("[data-delete-candidate]").forEach((button) => {
+          button.addEventListener("click", (event) => {
+            event.stopPropagation();
+            deleteCandidate(button.dataset.deleteCandidate);
+          });
+        });
+        updateExportButton();
+        updateCompareButton();
+        updateRefreshButton();
+        updateBackupButton();
+      }
+
+      function candidateRelationship(item) {
+        const node = state.nodes.find((entry) => entry.id === item.industry_node_id);
+        const text = `${node?.name || ""} ${node?.description || ""} ${item.reason || ""}`;
+        if (item.match_source === "manual") {
+          return { label: "人工补充", tone: "manual", evidence: item.reason || "由使用者手动加入，建议核对关联依据。" };
+        }
+        if (item.match_source === "fallback" || item.stock_code === "000000") {
+          return { label: "待核实", tone: "pending", evidence: item.reason || "暂未取得明确关联信息。" };
+        }
+        if (/材料|设备|零部件|原料|辅材|硅料|晶圆|电解液|连接器|电机|减速器/.test(text)) {
+          return { label: "上游配套", tone: "", evidence: item.reason || `与“${node?.name || "该方向"}”的上游供给相关。` };
+        }
+        if (/应用|服务|运营|渠道|终端|内容|电站|药店|消费|场景/.test(text)) {
+          return { label: "下游应用", tone: "", evidence: item.reason || `与“${node?.name || "该方向"}”的落地应用或服务相关。` };
+        }
+        return { label: "核心环节", tone: "", evidence: item.reason || `与“${node?.name || "该方向"}”的核心业务环节相关。` };
+      }
+
+      function candidateMeta(item) {
+        const source = {
+          akshare_concept: "行情数据工具概念",
+          seed_template: "内置模板",
+          manual: "人工添加",
+          fallback: "待匹配",
+        }[item.match_source] || item.match_source || "未知来源";
+        const details = Object.entries(item.score_details || {})
+          .map(([key, value]) => `${key}:${value}`)
+          .join(" / ");
+        return details ? `${source} · ${details}` : source;
+      }
+      function updateExportButton() {
+        els.export.disabled = state.candidates.length === 0;
+      }
+
+      function updateBackupButton() {
+        els.backup.disabled = !state.analysisId;
+      }
+
+      async function exportAnalysisBackup() {
+        if (!state.analysisId) return;
+        els.backup.disabled = true;
+        try {
+          const backup = await api(`/api/analysis/${state.analysisId}/backup`);
+          const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          const keyword = String(backup.analysis?.keyword || els.keyword.value || "research").trim();
+          link.href = url;
+          link.download = `${keyword}-研究备份.json`;
+          link.click();
+          URL.revokeObjectURL(url);
+          setStatus("已导出当前研究备份。", "status-ok");
+        } catch (error) {
+          setStatus(`备份导出失败：${error.message}`, "status-warn");
+        } finally {
+          updateBackupButton();
+        }
+      }
+
+      async function importAnalysisBackup(event) {
+        const file = event.target.files?.[0];
+        event.target.value = "";
+        if (!file) return;
+        try {
+          const backup = JSON.parse(await file.text());
+          const result = await api("/api/analysis/import", {
+            method: "POST",
+            body: JSON.stringify({ backup }),
+          });
+          await loadAnalysis(result.analysis_id);
+          await loadHistory();
+          setStatus(`已导入“${result.keyword}”：${result.imported_nodes} 个方向、${result.imported_candidates} 家公司。`, "status-ok");
+        } catch (error) {
+          setStatus(`备份导入失败：${error.message}`, "status-warn");
+        }
+      }
+
+      async function addIndustryNode() {
+        if (!state.analysisId) return;
+        const name = prompt("子领域名称");
+        if (!name?.trim()) return;
+        const description = prompt("子领域说明", "");
+        const keywordText = prompt("匹配关键词，用逗号分隔", name.trim()) || name.trim();
+        try {
+          const node = await api("/api/industry/nodes", {
+            method: "POST",
+            body: JSON.stringify({
+              analysis_id: state.analysisId,
+              name: name.trim(),
+              description: description?.trim() ?? "",
+              match_keywords: splitKeywords(keywordText),
+            }),
+          });
+          state.nodes.push(node);
+          state.activeNodeId = node.id;
+          renderNodes();
+          renderCandidates();
+          els.addCandidate.disabled = false;
+          setStatus(`已新增子领域：${node.name}`, "status-ok");
+        } catch (error) {
+          setStatus(`新增子领域失败：${error.message}`, "status-warn");
+        }
+      }
+
+      async function editIndustryNode(nodeId) {
+        const node = state.nodes.find((item) => item.id === nodeId);
+        if (!node) return;
+        const name = prompt("子领域名称", node.name);
+        if (!name?.trim()) return;
+        const description = prompt("子领域说明", node.description ?? "");
+        const keywordText = prompt("匹配关键词，用逗号分隔", node.match_keywords.join(", "));
+        try {
+          const updated = await api(`/api/industry/nodes/${nodeId}`, {
+            method: "PATCH",
+            body: JSON.stringify({
+              name: name.trim(),
+              description: description?.trim() ?? "",
+              match_keywords: splitKeywords(keywordText || name),
+            }),
+          });
+          state.nodes = state.nodes.map((item) => (item.id === nodeId ? updated : item));
+          renderNodes();
+          renderCandidates();
+          setStatus(`已更新子领域：${updated.name}`, "status-ok");
+        } catch (error) {
+          setStatus(`更新子领域失败：${error.message}`, "status-warn");
+        }
+      }
+
+      async function deleteIndustryNode(nodeId) {
+        const node = state.nodes.find((item) => item.id === nodeId);
+        if (!node || !confirm(`删除子领域“${node.name}”及其候选公司？`)) return;
+        try {
+          await api(`/api/industry/nodes/${nodeId}`, { method: "DELETE" });
+          state.nodes = state.nodes.filter((item) => item.id !== nodeId);
+          state.candidates = state.candidates.filter((item) => item.industry_node_id !== nodeId);
+          state.activeNodeId = state.nodes[0]?.id ?? null;
+          renderNodes();
+          renderCandidates();
+          updateExportButton();
+          els.addCandidate.disabled = !state.activeNodeId;
+          setStatus(`已删除子领域：${node.name}`, "status-ok");
+        } catch (error) {
+          setStatus(`删除子领域失败：${error.message}`, "status-warn");
+        }
+      }
+
+      async function addCandidate() {
+        if (!state.analysisId || !state.activeNodeId) return;
+        const stockCode = prompt("股票代码，6位数字");
+        if (!stockCode?.trim()) return;
+        const stockName = prompt("股票名称");
+        if (!stockName?.trim()) return;
+        const reason = prompt("候选理由", "用户手动添加");
+        try {
+          const candidate = await api("/api/company", {
+            method: "POST",
+            body: JSON.stringify({
+              analysis_id: state.analysisId,
+              industry_node_id: state.activeNodeId,
+              stock_code: stockCode.trim(),
+              stock_name: stockName.trim(),
+              reason: reason?.trim() || "用户手动添加",
+              score: 60,
+            }),
+          });
+          state.candidates.push(candidate);
+          renderCandidates();
+          updateExportButton();
+          setStatus(`已新增候选公司：${candidate.stock_name}`, "status-ok");
+        } catch (error) {
+          setStatus(`新增候选公司失败：${error.message}`, "status-warn");
+        }
+      }
+
+      async function editCandidate(candidateId) {
+        const candidate = state.candidates.find((item) => item.id === candidateId);
+        if (!candidate) return;
+        const stockCode = prompt("股票代码", candidate.stock_code);
+        if (!stockCode?.trim()) return;
+        const stockName = prompt("股票名称", candidate.stock_name);
+        if (!stockName?.trim()) return;
+        const reason = prompt("候选理由", candidate.reason ?? "");
+        const scoreText = prompt("评分 0-100", candidate.score ?? 50);
+        try {
+          const updated = await api(`/api/company/${candidateId}`, {
+            method: "PATCH",
+            body: JSON.stringify({
+              stock_code: stockCode.trim(),
+              stock_name: stockName.trim(),
+              reason: reason?.trim() ?? "",
+              score: Number(scoreText || candidate.score || 50),
+            }),
+          });
+          state.candidates = state.candidates.map((item) =>
+            item.id === candidateId ? updated : item,
+          );
+          renderCandidates();
+          updateExportButton();
+          setStatus(`已更新候选公司：${updated.stock_name}`, "status-ok");
+        } catch (error) {
+          setStatus(`更新候选公司失败：${error.message}`, "status-warn");
+        }
+      }
+
+      async function deleteCandidate(candidateId) {
+        const candidate = state.candidates.find((item) => item.id === candidateId);
+        if (!candidate || !confirm(`删除候选公司“${candidate.stock_name}”？`)) return;
+        try {
+          await api(`/api/company/${candidateId}`, { method: "DELETE" });
+          state.candidates = state.candidates.filter((item) => item.id !== candidateId);
+          if (state.selectedCandidate?.id === candidateId) {
+            state.selectedCandidate = null;
+            updateReportButtons(false);
+          }
+          renderCandidates();
+          updateExportButton();
+          setStatus(`已删除候选公司：${candidate.stock_name}`, "status-ok");
+        } catch (error) {
+          setStatus(`删除候选公司失败：${error.message}`, "status-warn");
+        }
+      }
+
+      function splitKeywords(value) {
+        return String(value ?? "")
+          .split(/[,，、\s]+/)
+          .map((item) => item.trim())
+          .filter(Boolean);
+      }
+
+      function exportCandidatesCsv() {
+        if (!state.candidates.length) return;
+        const nodeById = new Map(state.nodes.map((node) => [node.id, node.name]));
+        const rows = [
+          ["子领域", "代码", "名称", "关联类型", "评分", "来源", "评分构成", "市值", "关联依据"],
+          ...state.candidates.map((item) => [
+            nodeById.get(item.industry_node_id) ?? "",
+            item.stock_code,
+            item.stock_name,
+            candidateRelationship(item).label,
+            item.score ?? "",
+            item.match_source ?? "",
+            candidateMeta(item),
+            item.market_cap ?? "",
+            item.reason ?? "",
+          ]),
+        ];
+        const csv = rows
+          .map((row) => row.map(csvCell).join(","))
+          .join("\r\n");
+        const blob = new Blob([`\ufeff${csv}`], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        const keyword = els.keyword.value.trim() || "analysis";
+        link.href = url;
+        link.download = `${keyword}-候选公司.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+
+      function csvCell(value) {
+        const text = String(value ?? "");
+        return `"${text.replaceAll('"', '""')}"`;
+      }
+
+      function peerCandidates() {
+        const nodeId = state.selectedCandidate?.industry_node_id;
+        if (!nodeId) return [];
+        return Array.from(
+          new Map(
+            state.candidates
+              .filter((item) => item.industry_node_id === nodeId && /^\d{6}$/.test(item.stock_code))
+              .map((item) => [item.stock_code, item]),
+          ).values(),
+        ).slice(0, 8);
+      }
+
+      function updateCompareButton() {
+        els.compareButton.disabled = peerCandidates().length < 2;
+      }
+
+      function updateRefreshButton() {
+        els.refreshData.disabled = !state.selectedCandidate;
+      }
+
+      function clearPeerComparison() {
+        state.peerResult = null;
+        state.peerCandidates = [];
+        els.comparisonSort.value = "default";
+        els.comparisonSort.disabled = true;
+        els.peerComparison.className = "empty";
+        els.peerComparison.textContent = "选择公司后，可比较同一细分环节的候选公司。";
+      }
+
+      async function loadPeerComparison() {
+        const candidates = peerCandidates();
+        if (candidates.length < 2) return;
+        els.compareButton.disabled = true;
+        els.peerComparison.className = "empty";
+        els.peerComparison.textContent = "正在读取同一细分环节的行情和财务数据...";
+        try {
+          const codes = candidates.map((item) => item.stock_code).join(",");
+          const result = await api(`/api/stock/compare?codes=${encodeURIComponent(codes)}`);
+          state.peerResult = result;
+          state.peerCandidates = candidates;
+          els.comparisonSort.disabled = false;
+          renderPeerComparison(result, candidates);
+          const failed = result.warnings?.length ? `，${result.warnings.length} 家读取不完整` : "";
+          setStatus(`已比较 ${result.items?.length ?? 0} 家同一环节公司${failed}。`, result.warnings?.length ? "status-warn" : "status-ok");
+        } catch (error) {
+          els.peerComparison.textContent = `同业比较读取失败：${error.message}`;
+          setStatus(`同业比较读取失败：${error.message}`, "status-warn");
+        } finally {
+          updateCompareButton();
+        }
+      }
+
+      function renderPeerComparison(result, candidates) {
+        const names = new Map(candidates.map((item) => [item.stock_code, item.stock_name]));
+        const rows = sortPeerRows(result.items ?? [], els.comparisonSort.value);
+        if (!rows.length) {
+          els.peerComparison.className = "empty";
+          els.peerComparison.textContent = "暂未读取到可用于比较的数据。";
+          return;
+        }
+        els.peerComparison.className = "chart-stack";
+        els.peerComparison.innerHTML = [
+          `<div class="comparison-wrap"><table class="comparison-table"><thead><tr>
+            <th>公司</th><th>最新价</th><th>PE</th><th>PB</th><th>PS</th><th>总市值</th><th>ROE</th><th>毛利率</th><th>负债率</th>
+          </tr></thead><tbody>${rows.map((item) => `<tr>
+            <td><button type="button" data-peer-code="${escapeHtml(item.code)}">${escapeHtml(item.name || names.get(item.code) || item.code)}</button></td>
+            <td>${formatNumber(item.latest_price)}</td><td>${formatNumber(item.pe_ttm)}</td><td>${formatNumber(item.pb)}</td><td>${formatNumber(item.ps)}</td>
+            <td>${formatMoney(item.market_cap)}</td><td>${formatPct(item.roe)}</td><td>${formatPct(item.gross_margin)}</td><td>${formatPct(item.debt_ratio)}</td>
+          </tr>`).join("")}</tbody></table></div>`,
+          `<div class="empty">指标按各公司最新可得数据展示；财务报告期不一致时，请结合报告期和数据来源判断。</div>`,
+          warningBlock(result.warnings ?? []),
+        ].join("");
+        els.peerComparison.querySelectorAll("[data-peer-code]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const candidate = state.candidates.find((item) => item.stock_code === button.dataset.peerCode);
+            if (!candidate) return;
+            state.selectedCandidate = candidate;
+            updateCompareButton();
+            renderCandidates();
+            loadStockSummary(candidate.stock_code);
+          });
+        });
+      }
+
+      function sortPeerRows(rows, sortKey) {
+        const config = {
+          pe_asc: { key: "pe_ttm", direction: 1 },
+          roe_desc: { key: "roe", direction: -1 },
+          gross_margin_desc: { key: "gross_margin", direction: -1 },
+          market_cap_desc: { key: "market_cap", direction: -1 },
+        }[sortKey];
+        if (!config) return [...rows];
+        return [...rows].sort((left, right) => {
+          const leftValue = Number(left[config.key]);
+          const rightValue = Number(right[config.key]);
+          const leftMissing = !Number.isFinite(leftValue);
+          const rightMissing = !Number.isFinite(rightValue);
+          if (leftMissing || rightMissing) return leftMissing === rightMissing ? 0 : leftMissing ? 1 : -1;
+          return (leftValue - rightValue) * config.direction;
+        });
+      }
+
+      async function loadStockSummary(code, { refresh = false } = {}) {
+        clearPeerComparison();
+        els.stockSummary.className = "empty";
+        els.stockSummary.textContent = refresh ? `正在更新 ${code} 的数据...` : `正在读取 ${code} ...`;
+        els.stockDetails.className = "empty";
+        els.stockDetails.textContent = refresh ? "正在更新行情、K线和财务指标..." : "正在读取 K线和财务指标...";
+        els.refreshData.disabled = true;
+        updateReportButtons(false);
+        try {
+          const refreshFlag = refresh ? "&refresh=true" : "";
+          const [summaryResult, klineResult, financialResult] = await Promise.allSettled([
+            api(`/api/stock/${code}/summary${refresh ? "?refresh=true" : ""}`),
+            api(`/api/stock/${code}/kline?period=daily&days=365${refreshFlag}`),
+            api(`/api/stock/${code}/financial${refresh ? "?refresh=true" : ""}`),
+          ]);
+          if (summaryResult.status !== "fulfilled") {
+            throw summaryResult.reason;
+          }
+
+          const summary = summaryResult.value;
+          const kline =
+            klineResult.status === "fulfilled"
+              ? klineResult.value
+              : { code, period: "daily", points: [], source: "frontend", warnings: [klineResult.reason.message] };
+          const financial =
+            financialResult.status === "fulfilled"
+              ? financialResult.value
+              : { code, rows: [], source: "frontend", warnings: [financialResult.reason.message] };
+          state.selectedSummary = summary;
+          state.selectedKline = kline;
+          state.selectedFinancial = financial;
+          state.selectedValuation = await calculateValuationSnapshot(summary, kline, financial);
+          renderStockSummary(summary, state.selectedValuation);
+          renderStockDetails(kline, financial);
+          await loadSavedReports();
+          updateReportButtons(true);
+          const warnings = [
+            ...(summary.warnings ?? []),
+            ...(kline.warnings ?? []),
+            ...(financial.warnings ?? []),
+          ];
+          const warning = warnings.length ? ` 数据来源提示：${warnings.slice(0, 3).join("; ")}` : "";
+          setStatus(`${refresh ? "已更新" : "已读取"} ${code} 数据。${warning}`, warning ? "status-warn" : "status-ok");
+        } catch (error) {
+          state.selectedSummary = null;
+          state.selectedKline = null;
+          state.selectedFinancial = null;
+          state.selectedValuation = null;
+          updateReportButtons(false);
+          els.stockSummary.textContent = `读取失败：${error.message}`;
+          els.stockDetails.textContent = "走势与财务读取失败。";
+          setStatus(`公司行情读取失败：${error.message}`, "status-warn");
+        } finally {
+          updateRefreshButton();
+        }
+      }
+
+      async function calculateValuationSnapshot(summary, kline, financial) {
+        try {
+          return await api("/api/valuation/calculate", {
+            method: "POST",
+            body: JSON.stringify({
+              stock_summary: summary,
+              stock_kline: kline,
+              stock_financial: financial,
+            }),
+          });
+        } catch (error) {
+          return { markdown: "", methods: [], summary: {}, warnings: [error.message] };
+        }
+      }
+
+
+      async function runAnalysis(reportType) {
+        if (!state.analysisId || !state.selectedCandidate) return;
+        updateReportButtons(false);
+        els.analysisOutput.classList.remove("muted");
+        els.analysisOutput.textContent = reportType === "valuation" || reportType === "overview" ? "正在计算固定估值并生成分析..." : "正在生成分析...";
+        saveLlmConfig();
+        try {
+          let fixedValuation = null;
+          if (reportType === "valuation" || reportType === "overview") {
+            fixedValuation = state.selectedValuation || await calculateValuationSnapshot(state.selectedSummary, state.selectedKline, state.selectedFinancial);
+            state.selectedValuation = fixedValuation;
+            els.analysisOutput.textContent = fixedValuation.markdown;
+          }
+
+          const llmConfig = getLlmConfig();
+          const result = await api("/api/llm/analyze", {
+            method: "POST",
+            body: JSON.stringify({
+              analysis_id: state.analysisId,
+              stock_code: state.selectedCandidate.stock_code,
+              report_type: reportType,
+              stock_summary: state.selectedSummary,
+              stock_kline: state.selectedKline,
+              stock_financial: state.selectedFinancial,
+              api_config: llmConfig,
+            }),
+          });
+          const prefix = fixedValuation && result.source !== "local_draft" ? `${fixedValuation.markdown}\n\n---\n\n` : "";
+          els.analysisOutput.textContent = prefix + result.markdown_report;
+          state.latestReport = result;
+          if (fixedValuation) {
+            state.latestReport.markdown_report = prefix + result.markdown_report;
+          }
+          updateExportReportButton();
+          await loadSavedReports();
+          const warning = result.warnings?.length
+            ? ` 提示：${result.warnings.join("; ")}`
+            : "";
+          setStatus(`分析完成，来源：${result.source}。${warning}`, warning ? "status-warn" : "status-ok");
+        } catch (error) {
+          els.analysisOutput.textContent = `分析失败：${error.message}`;
+          setStatus(`分析失败：${error.message}`, "status-warn");
+        } finally {
+          updateReportButtons(Boolean(state.selectedCandidate));
+        }
+      }
+
+      async function loadSavedReports() {
+        if (!state.analysisId || !state.selectedCandidate) {
+          els.savedReports.innerHTML = "";
+          return;
+        }
+        try {
+          const result = await api(`/api/llm/reports?analysis_id=${encodeURIComponent(state.analysisId)}&stock_code=${encodeURIComponent(state.selectedCandidate.stock_code)}`);
+          const reports = result.reports ?? [];
+          if (!reports.length) {
+            els.savedReports.innerHTML = "";
+            return;
+          }
+          els.savedReports.innerHTML = reports.map((report) => `
+            <button class="saved-report-button" type="button" data-saved-report="${escapeHtml(report.id)}">
+              <span>查看已保存：${escapeHtml(reportTypeLabel(report.report_type))}</span>
+              <span>${escapeHtml(formatDateTime(report.created_at))}</span>
+            </button>
+          `).join("");
+          els.savedReports.querySelectorAll("[data-saved-report]").forEach((button) => {
+            button.addEventListener("click", () => {
+              const report = reports.find((item) => item.id === button.dataset.savedReport);
+              if (!report) return;
+              state.latestReport = { ...report, source: "saved_local_report" };
+              els.analysisOutput.className = "analysis-output";
+              els.analysisOutput.textContent = report.markdown_report;
+              updateExportReportButton();
+              setStatus(`已打开 ${reportTypeLabel(report.report_type)} 历史报告。`, "status-ok");
+            });
+          });
+        } catch {
+          els.savedReports.innerHTML = "";
+        }
+      }
+      function updateExportReportButton() {
+
+        els.exportReport.disabled = !state.latestReport;
+      }
+
+      function exportReportMarkdown() {
+        if (!state.latestReport || !state.selectedCandidate) return;
+        const reportType = reportTypeLabel(state.latestReport.report_type);
+        const keyword = els.keyword.value.trim() || "analysis";
+        const candidate = state.selectedCandidate;
+        const markdown = [
+          "---",
+          `keyword: ${keyword}`,
+          `stock_code: ${candidate.stock_code}`,
+          `stock_name: ${candidate.stock_name}`,
+          `report_type: ${reportType}`,
+          `source: ${state.latestReport.source}`,
+          `generated_at: ${new Date().toISOString()}`,
+          "---",
+          "",
+          `# ${candidate.stock_name}（${candidate.stock_code}）${reportType}`,
+          "",
+          state.latestReport.markdown_report,
+          "",
+          "> 仅供研究参考，不构成投资建议。",
+        ].join("\n");
+        const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${keyword}-${candidate.stock_code}-${state.latestReport.report_type}.md`;
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+
+      function reportTypeLabel(type) {
+        return {
+          valuation: "估值合理性",
+          financial: "财务健康度",
+          position: "行业地位",
+          risk: "主要风险",
+          overview: "综合分析",
+        }[type] || type || "分析报告";
+      }
+      function updateReportButtons(enabled = Boolean(state.selectedCandidate)) {
+        els.reportButtons.forEach((button) => {
+          button.disabled = !enabled;
+        });
+      }
+
+      function getLlmConfig() {
+        return {
+          endpoint: els.llmEndpoint.value.trim() || null,
+          api_key: els.llmKey.value.trim() || null,
+          model: els.llmModel.value.trim() || null,
+          temperature: Number(els.llmTemperature.value || 0.1),
+        };
+      }
+
+      function applyLlmPreset() {
+        const preset = LLM_PRESETS[els.llmProvider.value] || LLM_PRESETS.custom;
+        if (els.llmProvider.value !== "custom") {
+          els.llmEndpoint.value = preset.endpoint;
+          els.llmModel.value = preset.model;
+        }
+        saveLlmConfig();
+      }
+
+      function saveLlmConfig() {
+        localStorage.setItem(
+          "stock-chain-ai.llm",
+          JSON.stringify({
+            provider: els.llmProvider.value,
+            endpoint: els.llmEndpoint.value,
+            model: els.llmModel.value,
+            temperature: els.llmTemperature.value,
+          }),
+        );
+      }
+
+      function loadLlmConfig() {
+        try {
+          const config = JSON.parse(localStorage.getItem("stock-chain-ai.llm") || "{}");
+          const provider = LLM_PRESETS[config.provider] ? config.provider : "custom";
+          const preset = LLM_PRESETS[provider];
+          els.llmProvider.value = provider;
+          els.llmEndpoint.value = config.endpoint || preset.endpoint || "";
+          els.llmModel.value = config.model || preset.model || "";
+          els.llmTemperature.value = config.temperature || "0.1";
+        } catch {
+          els.llmProvider.value = "custom";
+          els.llmTemperature.value = "0.1";
+        }
+      }
+
+      function formatDiagnostics(result) {
+        const lines = [
+          "数据来源诊断",
+          `供应商：${result.provider}`,
+          `时间：${formatDateTime(result.checked_at)}`,
+          "",
+          ...result.checks.map((check) => {
+            const mark = check.ok ? "通过" : "异常";
+            const size = Number.isFinite(check.sample_size) ? `，样本 ${check.sample_size}` : "";
+            return `${mark}｜${check.name}：${check.detail || "-"}${size}`;
+          }),
+          "",
+          "说明：行情数据工具 是 Python 包，很多数据来自东方财富、新浪等上游站点；如果包已安装但远程接口异常，通常是网络、代理、DNS、上游限流或接口变更导致。",
+        ];
+        return lines.join("\n");
+      }
+      function renderStockSummary(summary, valuation = null) {
+        const warnings = summary.warnings ?? [];
+        els.stockSummary.className = "chart-stack";
+        els.stockSummary.innerHTML = [
+          `<div class="metric-grid">
+            ${[
+              metric("名称", summary.name ?? "-"),
+              metric("最新价", formatNumber(summary.latest_price)),
+              metric("涨跌幅", formatPct(summary.change_pct)),
+              metric("PE TTM", formatNumber(summary.pe_ttm)),
+              metric("PB", formatNumber(summary.pb)),
+              metric("总市值", formatMoney(summary.market_cap)),
+              metric("数据时间", formatDateTime(summary.data_time)),
+              metric("信息来源", dataSourceLabel(summary.source)),
+            ].join("")}
+          </div>`,
+          renderValuationSnapshot(valuation),
+          warningBlock(warnings),
+        ].join("");
+      }
+
+      function renderValuationSnapshot(valuation) {
+        if (!valuation || !Array.isArray(valuation.methods)) {
+          return chartEmpty("固定估值", "选择公司后自动计算可用估值方法");
+        }
+        const methods = valuation.methods.filter((item) => item.value !== null && item.value !== undefined);
+        const picked = ["PE 市盈率", "PB 市净率", "PS 市销率", "PEG", "股息率", "RIM/EBO"]
+          .map((name) => valuation.methods.find((item) => item.name === name))
+          .filter(Boolean);
+        const quality = valuation.quality || {};
+        return `
+          <div class="chart-card">
+            <div class="chart-title">
+              <span>固定估值检查</span>
+              <span>可计算 ${methods.length}/${valuation.methods.length || 0}</span>
+            </div>
+            <div class="metric-grid compact">
+              ${picked.map((item) => metric(item.name.replace(" 市盈率", "").replace(" 市净率", "").replace(" 市销率", ""), valuationValue(item))).join("")}
+            </div>
+            <div class="empty" style="margin-top: 8px;">
+              财务质量：${escapeHtml(quality.signal || "数据不足")}。${escapeHtml(quality.text || "需要更多财务数据。")}
+            </div>
+          </div>
+        `;
+      }
+
+      function valuationValue(item) {
+        if (!item || item.value === null || item.value === undefined) return "-";
+        const suffix = item.suffix || "";
+        return `${Number(item.value).toFixed(2)}${suffix}`;
+      }
+      function renderStockDetails(kline, financial) {
+        const lastPoint = kline.points?.at(-1) ?? {};
+        const latestFinancial = financial.rows?.[0] ?? {};
+        const warnings = [...(kline.warnings ?? []), ...(financial.warnings ?? [])];
+        els.stockDetails.className = "chart-stack";
+        els.stockDetails.innerHTML = [
+          renderKlineChart(kline.points ?? []),
+          renderFinancialChart(financial.rows ?? []),
+          `<div class="metric-grid compact">
+            ${[
+              metric("K线数量", kline.points?.length ?? 0),
+              metric("最新K线日期", lastPoint.date ?? "-"),
+              metric("最新收盘", formatNumber(lastPoint.close)),
+              metric("财务期数", financial.rows?.length ?? 0),
+              metric("最近报告期", latestFinancial.report_date ?? "-"),
+              metric("财务来源", dataSourceLabel(financial.source)),
+              metric("ROE", formatPct(latestFinancial.roe)),
+              metric("毛利率", formatPct(latestFinancial.gross_margin)),
+              metric("资产负债率", formatPct(latestFinancial.debt_ratio)),
+              metric("归母净利润", formatMoney(latestFinancial.net_profit)),
+            ].join("")}
+          </div>`,
+          warningBlock(warnings),
+        ].join("");
+      }
+      function renderKlineChart(points) {
+        const cleanPoints = points
+          .filter(
+            (point) =>
+              point.open !== null &&
+              point.close !== null &&
+              point.high !== null &&
+              point.low !== null,
+          )
+          .slice(-80);
+        if (cleanPoints.length < 2) {
+          return chartEmpty("K线图", "K线数据不足");
+        }
+
+        const highs = cleanPoints.map((point) => Number(point.high));
+        const lows = cleanPoints.map((point) => Number(point.low));
+        const min = Math.min(...lows);
+        const max = Math.max(...highs);
+        const range = max - min || 1;
+        const width = 560;
+        const height = 190;
+        const pad = 20;
+        const slot = (width - pad * 2) / cleanPoints.length;
+        const bodyWidth = Math.max(3, Math.min(9, slot * 0.56));
+        const yFor = (value) => height - pad - ((Number(value) - min) / range) * (height - pad * 2);
+        const candles = cleanPoints
+          .map((point, index) => {
+            const open = Number(point.open);
+            const close = Number(point.close);
+            const high = Number(point.high);
+            const low = Number(point.low);
+            const x = pad + index * slot + slot / 2;
+            const yHigh = yFor(high);
+            const yLow = yFor(low);
+            const yOpen = yFor(open);
+            const yClose = yFor(close);
+            const y = Math.min(yOpen, yClose);
+            const bodyHeight = Math.max(2, Math.abs(yClose - yOpen));
+            const cls = close >= open ? "candle-up" : "candle-down";
+            const title = `${point.date} O:${open} H:${high} L:${low} C:${close}`;
+            return `
+              <g>
+                <title>${escapeHtml(title)}</title>
+                <line class="${cls} candle-wick" x1="${x.toFixed(1)}" y1="${yHigh.toFixed(1)}" x2="${x.toFixed(1)}" y2="${yLow.toFixed(1)}"></line>
+                <rect class="${cls}" x="${(x - bodyWidth / 2).toFixed(1)}" y="${y.toFixed(1)}" width="${bodyWidth.toFixed(1)}" height="${bodyHeight.toFixed(1)}"></rect>
+              </g>
+            `;
+          })
+          .join("");
+        const first = cleanPoints[0];
+        const last = cleanPoints.at(-1);
+
+        return `
+          <div class="chart-card">
+            <div class="chart-title">
+              <span>K线图（日线）</span>
+              <span>${escapeHtml(first.date)} - ${escapeHtml(last.date)}</span>
+            </div>
+            <svg class="chart-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="K线图">
+              <line class="chart-axis" x1="${pad}" y1="${height - pad}" x2="${width - pad}" y2="${height - pad}"></line>
+              <line class="chart-axis" x1="${pad}" y1="${pad}" x2="${width - pad}" y2="${pad}"></line>
+              ${candles}
+            </svg>
+          </div>
+        `;
+      }
+
+      function renderFinancialChart(rows) {
+        const cleanRows = rows
+          .filter((row) => row.net_profit !== null || row.roe !== null)
+          .slice(0, 8)
+          .reverse();
+        if (cleanRows.length < 2) {
+          return chartEmpty("财务趋势", "财务数据不足");
+        }
+
+        const width = 560;
+        const height = 170;
+        const pad = 22;
+        const profits = cleanRows.map((row) => Number(row.net_profit ?? 0));
+        const roes = cleanRows.map((row) => Number(row.roe ?? 0));
+        const maxProfit = Math.max(...profits.map(Math.abs), 1);
+        const minRoe = Math.min(...roes);
+        const maxRoe = Math.max(...roes);
+        const roeRange = maxRoe - minRoe || 1;
+        const slot = (width - pad * 2) / cleanRows.length;
+        const barWidth = Math.max(8, slot * 0.48);
+        const zeroY = height - pad;
+        const bars = profits
+          .map((value, index) => {
+            const x = pad + index * slot + (slot - barWidth) / 2;
+            const barHeight = Math.max(2, (Math.abs(value) / maxProfit) * (height - pad * 2));
+            const y = value >= 0 ? zeroY - barHeight : zeroY;
+            return `<rect class="chart-bar" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barWidth.toFixed(1)}" height="${barHeight.toFixed(1)}"></rect>`;
+          })
+          .join("");
+        const roeLine = roes
+          .map((value, index) => {
+            const x = pad + index * slot + slot / 2;
+            const y = height - pad - ((value - minRoe) / roeRange) * (height - pad * 2);
+            return `${x.toFixed(1)},${y.toFixed(1)}`;
+          })
+          .join(" ");
+        const first = cleanRows[0];
+        const last = cleanRows.at(-1);
+
+        return `
+          <div class="chart-card">
+            <div class="chart-title">
+              <span>净利润与ROE</span>
+              <span>${escapeHtml(first.report_date)} - ${escapeHtml(last.report_date)}</span>
+            </div>
+            <svg class="chart-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="财务趋势">
+              <line class="chart-axis" x1="${pad}" y1="${zeroY}" x2="${width - pad}" y2="${zeroY}"></line>
+              ${bars}
+              <polyline class="chart-roe" points="${roeLine}"></polyline>
+            </svg>
+          </div>
+        `;
+      }
+
+      function dataSourceLabel(source) {
+        return {
+          sina: "新浪行情",
+          efinance: "东方财富行情",
+          efinance_base_info: "东方财富公司资料",
+          akshare: "行情数据服务",
+          tushare: "Tushare",
+          local_financial_snapshot: "本地参考数据",
+          multi_provider: "多个公开来源",
+        }[source] || source || "-";
+      }
+
+      function friendlyWarning(warning) {
+        const text = String(warning || "");
+        const known = {
+          served_from_cache: "显示近期读取的数据",
+          refresh_failed_served_from_cache: "更新未完成，暂时显示上次成功读取的数据",
+          used_tushare: "部分指标已由 Tushare 补全",
+          used_efinance_base_info: "部分公司资料已由公开来源补全",
+          used_local_financial_snapshot: "部分指标使用本地参考数据，请结合最新公告复核",
+          akshare_returned_empty_financial: "暂未从主数据源取得财务明细",
+        };
+        if (known[text]) return known[text];
+        if (/timed out/i.test(text)) return "数据更新超时，请稍后再试";
+        if (/returned empty/i.test(text)) return "该来源暂未返回数据";
+        if (/query failed/i.test(text)) return "部分公开数据暂时无法读取";
+        return text;
+      }
+
+      function warningBlock(warnings) {
+        const list = (warnings ?? []).filter(Boolean).map(friendlyWarning);
+        if (!list.length) return "";
+        return `<div class="empty status-warn">数据提示：${escapeHtml(list.slice(0, 4).join("；"))}</div>`;
+      }
+      function chartEmpty(title, message) {
+        return `
+          <div class="chart-card">
+            <div class="chart-title"><span>${escapeHtml(title)}</span></div>
+            <div class="empty">${escapeHtml(message)}</div>
+          </div>
+        `;
+      }
+
+      function metric(label, value) {
+        return `
+          <div class="metric">
+            <div class="metric-label">${escapeHtml(label)}</div>
+            <div class="metric-value">${escapeHtml(String(value))}</div>
+          </div>
+        `;
+      }
+
+      function formatNumber(value) {
+        return value === null || value === undefined ? "-" : Number(value).toFixed(2);
+      }
+
+      function formatPct(value) {
+        return value === null || value === undefined ? "-" : `${Number(value).toFixed(2)}%`;
+      }
+
+      function formatMoney(value) {
+        if (value === null || value === undefined) return "-";
+        return `${(Number(value) / 100000000).toFixed(2)} 亿`;
+      }
+
+      function formatDateTime(value) {
+        if (!value) return "-";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return value;
+        return date.toLocaleString("zh-CN", {
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+
+      function escapeHtml(value) {
+        return value.replace(/[&<>"']/g, (char) =>
+          ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#039;",
+          })[char],
+        );
+      }
+    </script>
+  </body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
