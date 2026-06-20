@@ -116,6 +116,13 @@ class AkshareProvider:
                     "roe": _number_any(raw, ["净资产收益率(%)", "加权净资产收益率(%)", "净资产收益率", "ROE", "roe"]),
                     "gross_margin": _number_any(raw, ["销售毛利率(%)", "毛利率", "销售毛利率", "gross_margin"]),
                     "debt_ratio": _number_any(raw, ["资产负债率(%)", "资产负债率", "debt_ratio"]),
+                    "operating_cash_flow": _number_any(raw, ["经营活动产生的现金流量净额", "经营现金流", "经营现金流量净额"]),
+                    "capital_expenditure": _number_any(raw, ["购建固定资产、无形资产和其他长期资产支付的现金", "资本开支"]),
+                    "free_cash_flow": _number_any(raw, ["自由现金流", "企业自由现金流"]),
+                    "total_debt": _number_any(raw, ["有息负债", "总负债"]),
+                    "cash_balance": _number_any(raw, ["货币资金", "现金及现金等价物"]),
+                    "current_ratio": _number_any(raw, ["流动比率", "current_ratio"]),
+                    "interest_coverage": _number_any(raw, ["利息保障倍数", "interest_coverage"]),
                     "raw_fields": {str(key): _jsonable(value) for key, value in raw.items()},
                 }
             )
@@ -268,3 +275,5 @@ def _keyword_tokens(keyword: str) -> list[str]:
             next_tokens.extend(token.split(separator))
         tokens = next_tokens
     return [token.strip() for token in tokens if len(token.strip()) >= 2]
+
+

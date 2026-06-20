@@ -47,7 +47,16 @@ def financial_rows_from_snapshot(code: str) -> list[dict[str, Any]]:
             "roe": snapshot.get("roe"),
             "gross_margin": snapshot.get("gross_margin"),
             "debt_ratio": snapshot.get("debt_ratio"),
+            "operating_cash_flow": snapshot.get("operating_cash_flow"),
+            "capital_expenditure": snapshot.get("capital_expenditure"),
+            "free_cash_flow": snapshot.get("free_cash_flow"),
+            "total_debt": snapshot.get("total_debt"),
+            "cash_balance": snapshot.get("cash_balance"),
+            "current_ratio": snapshot.get("current_ratio"),
+            "interest_coverage": snapshot.get("interest_coverage"),
             "raw_fields": {"source": "local_financial_snapshot", **snapshot},
         }
     ]
+
+
 

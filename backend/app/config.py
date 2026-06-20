@@ -14,3 +14,8 @@ CACHE_TTL_SECONDS = int(os.getenv("STOCK_CHAIN_CACHE_TTL_SECONDS", "3600"))
 
 TUSHARE_TOKEN = os.getenv("STOCK_CHAIN_TUSHARE_TOKEN", "")
 
+
+# Optional machine-local default AI provider. Never put the key in source control.
+DEFAULT_LLM_ENDPOINT = os.getenv("STOCK_CHAIN_DEFAULT_LLM_ENDPOINT", "https://api.siliconflow.cn/v1")
+DEFAULT_LLM_API_KEY = os.getenv("STOCK_CHAIN_DEFAULT_LLM_API_KEY", "")
+DEFAULT_LLM_MODEL = os.getenv("STOCK_CHAIN_DEFAULT_LLM_MODEL", "deepseek-ai/DeepSeek-V3")

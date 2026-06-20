@@ -145,3 +145,15 @@ POST /api/llm/analyze
 
 
 
+
+## 本机默认硅基流动模型（可选）
+
+为了让本机使用者无需在页面填写 Key，可在**运行后端的这台电脑**设置环境变量；Key 不会写入项目、数据库或 GitHub：
+
+```powershell
+$env:STOCK_CHAIN_DEFAULT_LLM_API_KEY="你的硅基流动 Key"
+$env:STOCK_CHAIN_DEFAULT_LLM_MODEL="deepseek-ai/DeepSeek-V3"
+& ".\backend\run_stable.ps1"
+```
+
+页面中填写自己的 API 配置时，会优先使用用户填写的配置。不要把 Key 写入 `.env` 之外的项目文件，也不要提交到 GitHub。

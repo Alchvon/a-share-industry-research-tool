@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
@@ -55,6 +55,13 @@ class FinancialMetricRow(BaseModel):
     roe: float | None = None
     gross_margin: float | None = None
     debt_ratio: float | None = None
+    operating_cash_flow: float | None = None
+    capital_expenditure: float | None = None
+    free_cash_flow: float | None = None
+    total_debt: float | None = None
+    cash_balance: float | None = None
+    current_ratio: float | None = None
+    interest_coverage: float | None = None
     raw_fields: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -86,3 +93,6 @@ class PeerComparisonItem(BaseModel):
 class PeerComparisonResponse(BaseModel):
     items: list[PeerComparisonItem]
     warnings: list[str] = Field(default_factory=list)
+
+
+

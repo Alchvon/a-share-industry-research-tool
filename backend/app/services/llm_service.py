@@ -7,6 +7,7 @@ from typing import Any
 
 import requests
 
+from app.config import DEFAULT_LLM_API_KEY, DEFAULT_LLM_ENDPOINT, DEFAULT_LLM_MODEL
 from app.db import get_connection, init_db
 from app.models.llm import AnalyzeRequest, AnalyzeResponse, LlmApiConfig
 from app.services.analysis_service import AnalysisService
@@ -28,13 +29,23 @@ class LlmService:
         report_type_label = REPORT_LABELS.get(payload.report_type, payload.report_type)
         warnings: list[str] = []
 
-        if not _has_remote_config(payload.api_config):
+        api_config = payload.api_config
+        if not _has_remote_config(api_config) and DEFAULT_LLM_API_KEY:
+            api_config = LlmApiConfig(
+                endpoint=DEFAULT_LLM_ENDPOINT,
+                api_key=DEFAULT_LLM_API_KEY,
+                model=DEFAULT_LLM_MODEL,
+                temperature=payload.api_config.temperature,
+            )
+            warnings.append("used_machine_default_llm")
+
+        if not _has_remote_config(api_config):
             warnings.append("used_local_draft_without_llm_config")
             markdown = self._local_draft(context, report_type_label)
             source = "local_draft"
         else:
             prompt = self._build_prompt(context, report_type_label)
-            markdown = self._call_openai_compatible(payload.api_config, prompt)
+            markdown = self._call_openai_compatible(api_config, prompt)
             source = "openai_compatible"
 
         self._save_report(
@@ -277,6 +288,9 @@ def _display(value: Any, suffix: str = "") -> str:
     if value is None or value == "":
         return "缺失"
     return f"{value}{suffix}"
+
+
+
 
 
 

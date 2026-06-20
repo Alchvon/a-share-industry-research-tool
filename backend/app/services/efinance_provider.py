@@ -81,6 +81,13 @@ class EfinanceProvider:
                 "roe": info.get("roe"),
                 "gross_margin": info.get("gross_margin"),
                 "debt_ratio": None,
+                "operating_cash_flow": None,
+                "capital_expenditure": None,
+                "free_cash_flow": None,
+                "total_debt": None,
+                "cash_balance": None,
+                "current_ratio": None,
+                "interest_coverage": None,
                 "raw_fields": {"source": "efinance_base_info", **(info.get("raw_fields") or {})},
             }
         ]
@@ -154,5 +161,7 @@ def _jsonable(value: Any) -> Any:
     if hasattr(value, "item"):
         return value.item()
     return value
+
+
 
 

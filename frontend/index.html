@@ -142,7 +142,7 @@
 
       .search {
         display: grid;
-        grid-template-columns: minmax(180px, 430px) auto;
+        grid-template-columns: 148px minmax(180px, 430px) auto;
         gap: 8px;
         flex: 1;
         max-width: 620px;
@@ -629,7 +629,8 @@
       <header class="topbar">
         <div class="brand"><span>A股产业链龙头分析器</span><small>研究工作台</small></div>
         <form class="search" id="searchForm">
-          <input id="keywordInput" value="人工智能" list="topicSuggestions" aria-label="行业关键词" />
+          <select id="researchMode" aria-label="研究方式"><option value="company">单公司深度研究</option><option value="related">寻找相关公司</option></select>
+          <input id="keywordInput" value="人工智能" list="topicSuggestions" aria-label="公司或行业关键词" />
           <datalist id="topicSuggestions"></datalist>
           <button class="primary" id="startButton" type="submit">开始研究</button>
         </form>
@@ -820,11 +821,13 @@
         peerResult: null,
         peerCandidates: [],
         latestReport: null,
+        researchMode: "company",
       };
 
       const els = {
         form: document.querySelector("#searchForm"),
         keyword: document.querySelector("#keywordInput"),
+        researchMode: document.querySelector("#researchMode"),
         topicSuggestions: document.querySelector("#topicSuggestions"),
         start: document.querySelector("#startButton"),
         health: document.querySelector("#healthButton"),
@@ -859,6 +862,11 @@
       };
 
       loadLlmConfig();
+      els.researchMode.addEventListener("change", () => {
+        state.researchMode = els.researchMode.value;
+        els.keyword.placeholder = state.researchMode === "company" ? "输入公司名称或 6 位股票代码" : "输入行业、产品或主题";
+      });
+      els.researchMode.dispatchEvent(new Event("change"));
       els.reportButtons.forEach((button) => {
         button.addEventListener("click", () => runAnalysis(button.dataset.report));
       });
@@ -993,10 +1001,21 @@
           const warning = matched.warnings?.length
             ? ` 提示：${matched.warnings.join("; ")}`
             : "";
-          setStatus(
-            `已找到 ${state.candidates.length} 家相关公司。${warning}`,
-            warning ? "status-warn" : "status-ok",
-          );
+          if (state.researchMode === "company") {
+            const query = els.keyword.value.trim().toLowerCase();
+            const target = state.candidates.find((item) => item.stock_code === query || item.stock_name.toLowerCase() === query);
+            if (target) {
+              state.activeNodeId = target.industry_node_id;
+              state.selectedCandidate = target;
+              renderNodes(); renderCandidates(); updateCompareButton(); updateRefreshButton();
+              setStatus(`已锁定 ${target.stock_name}，正在读取深度研究数据。`, "status-ok");
+              await loadStockSummary(target.stock_code);
+            } else {
+              setStatus("未能准确识别该公司；请使用 6 位股票代码，或切换到“寻找相关公司”。", "status-warn");
+            }
+          } else {
+            setStatus(`已找到 ${state.candidates.length} 家相关公司。${warning}`, warning ? "status-warn" : "status-ok");
+          }
         } catch (error) {
           setStatus(`寻找公司失败：${error.message}`, "status-warn");
         } finally {
@@ -1971,6 +1990,12 @@
               metric("ROE", formatPct(latestFinancial.roe)),
               metric("毛利率", formatPct(latestFinancial.gross_margin)),
               metric("资产负债率", formatPct(latestFinancial.debt_ratio)),
+              metric("经营现金流", formatMoney(latestFinancial.operating_cash_flow)),
+              metric("自由现金流", formatMoney(latestFinancial.free_cash_flow)),
+              metric("有息负债", formatMoney(latestFinancial.total_debt)),
+              metric("现金余额", formatMoney(latestFinancial.cash_balance)),
+              metric("流动比率", formatNumber(latestFinancial.current_ratio)),
+              metric("利息保障倍数", formatNumber(latestFinancial.interest_coverage)),
               metric("归母净利润", formatMoney(latestFinancial.net_profit)),
             ].join("")}
           </div>`,
@@ -2189,6 +2214,14 @@
     </script>
   </body>
 </html>
+
+
+
+
+
+
+
+
 
 
 
