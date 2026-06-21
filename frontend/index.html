@@ -465,6 +465,8 @@
         fill: rgba(0, 124, 137, 0.11);
       }
 
+      .projected-bar { fill: none; stroke: #a45f00; stroke-width: 2; stroke-dasharray: 5 3; }
+
       .chart-bar {
         fill: rgba(0, 124, 137, 0.58);
       }
@@ -1666,10 +1668,11 @@
         updateReportButtons(false);
         try {
           const refreshFlag = refresh ? "&refresh=true" : "";
-          const [summaryResult, klineResult, financialResult] = await Promise.allSettled([
+          const [summaryResult, klineResult, financialResult, researchResult] = await Promise.allSettled([
             api(`/api/stock/${code}/summary${refresh ? "?refresh=true" : ""}`),
             api(`/api/stock/${code}/kline?period=daily&days=365${refreshFlag}`),
             api(`/api/stock/${code}/financial${refresh ? "?refresh=true" : ""}`),
+            api(`/api/stock/${code}/research${refresh ? "?refresh=true" : ""}`),
           ]);
           if (summaryResult.status !== "fulfilled") {
             throw summaryResult.reason;
@@ -1687,15 +1690,17 @@
           state.selectedSummary = summary;
           state.selectedKline = kline;
           state.selectedFinancial = financial;
+          const research = researchResult.status === "fulfilled" ? researchResult.value : null;
           state.selectedValuation = await calculateValuationSnapshot(summary, kline, financial);
           renderStockSummary(summary, state.selectedValuation);
-          renderStockDetails(kline, financial);
+          renderStockDetails(kline, financial, research);
           await loadSavedReports();
           updateReportButtons(true);
           const warnings = [
             ...(summary.warnings ?? []),
             ...(kline.warnings ?? []),
             ...(financial.warnings ?? []),
+            ...(research?.warnings ?? []),
           ];
           const warning = warnings.length ? ` 数据来源提示：${warnings.slice(0, 3).join("; ")}` : "";
           setStatus(`${refresh ? "已更新" : "已读取"} ${code} 数据。${warning}`, warning ? "status-warn" : "status-ok");
@@ -1971,13 +1976,14 @@
         const suffix = item.suffix || "";
         return `${Number(item.value).toFixed(2)}${suffix}`;
       }
-      function renderStockDetails(kline, financial) {
+      function renderStockDetails(kline, financial, research = null) {
         const lastPoint = kline.points?.at(-1) ?? {};
         const latestFinancial = financial.rows?.[0] ?? {};
         const warnings = [...(kline.warnings ?? []), ...(financial.warnings ?? [])];
         els.stockDetails.className = "chart-stack";
         els.stockDetails.innerHTML = [
           renderKlineChart(kline.points ?? []),
+          renderCashflowAndDebt(research),
           renderFinancialChart(financial.rows ?? []),
           `<div class="metric-grid compact">
             ${[
@@ -2002,6 +2008,47 @@
           warningBlock(warnings),
         ].join("");
       }
+
+      function renderCashflowAndDebt(research) {
+        if (!research?.cashflow || !research?.debt) {
+          return chartEmpty("现金流与负债", "暂未取得完整研究数据");
+        }
+        const cashflow = research.cashflow;
+        const debt = research.debt;
+        const points = cashflow.points ?? [];
+        const values = points.map((point) => Number(point.free_cash_flow ?? point.operating_cash_flow ?? 0));
+        const maxValue = Math.max(...values.map(Math.abs), 1);
+        const width = 560, height = 160, pad = 24;
+        const slot = (width - pad * 2) / Math.max(points.length, 1);
+        const bars = points.map((point, index) => {
+          const value = values[index];
+          const barHeight = Math.max(2, Math.abs(value) / maxValue * (height - pad * 2));
+          const x = pad + index * slot + slot * 0.2;
+          const y = value >= 0 ? height - pad - barHeight : height - pad;
+          const cls = point.kind === "projected" ? "chart-bar projected-bar" : "chart-bar";
+          const title = `${point.report_date}：${point.kind === "projected" ? "预测" : "历史"} ${formatMoney(value)}`;
+          return `<rect class="${cls}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(5, slot * 0.6).toFixed(1)}" height="${barHeight.toFixed(1)}"><title>${escapeHtml(title)}</title></rect>`;
+        }).join("");
+        return `
+          <div class="chart-card">
+            <div class="chart-title"><span>现金流趋势与预测</span><span>实心：历史 · 虚线：预测</span></div>
+            <svg class="chart-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="现金流历史与预测">
+              <line class="chart-axis" x1="${pad}" y1="${height - pad}" x2="${width - pad}" y2="${height - pad}"></line>
+              ${bars}
+            </svg>
+            <div class="empty" style="margin-top:8px;">现金流：${escapeHtml(cashflow.signal)}。 ${escapeHtml(cashflow.text)}<br>预测方法：${escapeHtml(cashflow.projection_method)}</div>
+            <div class="metric-grid compact" style="margin-top:8px;">${[
+              metric("负债判断", debt.signal),
+              metric("资产负债率", formatPct(debt.debt_ratio)),
+              metric("净负债", formatMoney(debt.net_debt)),
+              metric("流动比率", formatNumber(debt.current_ratio)),
+              metric("利息保障倍数", formatNumber(debt.interest_coverage)),
+              metric("负债报告期", debt.report_date ?? "-"),
+            ].join("")}</div>
+            <div class="empty" style="margin-top:8px;">${escapeHtml(debt.text)}</div>
+          </div>`;
+      }
+
       function renderKlineChart(points) {
         const cleanPoints = points
           .filter(
