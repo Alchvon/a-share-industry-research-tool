@@ -72,6 +72,44 @@ class StockFinancialResponse(BaseModel):
     warnings: list[str] = Field(default_factory=list)
 
 
+class CashflowTrendPoint(BaseModel):
+    report_date: str
+    operating_cash_flow: float | None = None
+    free_cash_flow: float | None = None
+    kind: str = "historical"
+    assumption: str | None = None
+
+
+class CashflowAssessment(BaseModel):
+    signal: str
+    text: str
+    projection_method: str
+    points: list[CashflowTrendPoint] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+
+
+class DebtAssessment(BaseModel):
+    signal: str
+    text: str
+    debt_ratio: float | None = None
+    total_debt: float | None = None
+    cash_balance: float | None = None
+    net_debt: float | None = None
+    current_ratio: float | None = None
+    interest_coverage: float | None = None
+    report_date: str | None = None
+    warnings: list[str] = Field(default_factory=list)
+
+
+class CompanyResearchResponse(BaseModel):
+    code: str
+    summary: StockSummary
+    financial: StockFinancialResponse
+    cashflow: CashflowAssessment
+    debt: DebtAssessment
+    warnings: list[str] = Field(default_factory=list)
+
+
 class PeerComparisonItem(BaseModel):
     code: str
     name: str | None = None
