@@ -2,7 +2,8 @@
 
 from fastapi import APIRouter, HTTPException, Path, Query
 
-from app.models.stock import PeerComparisonResponse, StockFinancialResponse, StockKlineResponse, StockSummary
+from app.models.stock import CompanyResearchResponse, PeerComparisonResponse, StockFinancialResponse, StockKlineResponse, StockSummary
+from app.services.company_research_service import CompanyResearchService
 from app.services.stock_data_service import StockDataService
 
 
@@ -38,6 +39,13 @@ def stock_financial(
     return service.get_financial(code, force_refresh=refresh)
 
 
+
+@router.get("/{code}/research", response_model=CompanyResearchResponse)
+def company_research(
+    code: str = Path(..., min_length=6, max_length=6),
+    refresh: bool = Query(default=False),
+) -> CompanyResearchResponse:
+    return CompanyResearchService().get_research(code, force_refresh=refresh)
 
 
 @router.get("/compare", response_model=PeerComparisonResponse)
